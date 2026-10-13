@@ -93,12 +93,14 @@ endif
 DST_FRONT_FILES = $(CAMERA_KERNEL_PATH)/drivers/cam_sensor_module/cam_sensor/cam_sensor_adaptive_mipi_front.h
 DST_FRONT_TOP_FILES = $(CAMERA_KERNEL_PATH)/drivers/cam_sensor_module/cam_sensor/cam_sensor_adaptive_mipi_front_top.h
 
-#Copy sensor header for adaptive mipi
-$(info camera_adaptive_mipi="$(shell cp -f $(SRC_WIDE_FILES) $(DST_WIDE_FILES))")
-$(info camera_adaptive_mipi="$(shell cp -f $(SRC_UW_FILES) $(DST_UW_FILES))")
-$(info camera_adaptive_mipi="$(shell cp -f $(SRC_TELE_FILES) $(DST_TELE_FILES))")
-$(info camera_adaptive_mipi="$(shell cp -f $(SRC_FRONT_FILES) $(DST_FRONT_FILES))")
-$(info camera_adaptive_mipi="$(shell cp -f $(SRC_FRONT_TOP_FILES) $(DST_FRONT_TOP_FILES))")
+# Select sensor headers for adaptive mipi without writing into the source tree,
+# falling back to the default header for slots the device does not define
+ccflags-y += \
+	-DCAM_SENSOR_ADAPTIVE_MIPI_WIDE_H=\"$(or $(SRC_WIDE_FILES),$(DST_WIDE_FILES))\" \
+	-DCAM_SENSOR_ADAPTIVE_MIPI_UW_H=\"$(or $(SRC_UW_FILES),$(DST_UW_FILES))\" \
+	-DCAM_SENSOR_ADAPTIVE_MIPI_TELE_H=\"$(or $(SRC_TELE_FILES),$(DST_TELE_FILES))\" \
+	-DCAM_SENSOR_ADAPTIVE_MIPI_FRONT_H=\"$(or $(SRC_FRONT_FILES),$(DST_FRONT_FILES))\" \
+	-DCAM_SENSOR_ADAPTIVE_MIPI_FRONT_TOP_H=\"$(or $(SRC_FRONT_TOP_FILES),$(DST_FRONT_TOP_FILES))\"
 
 # List of all camera-kernel headers
 cam_include_dirs := $(shell dirname `find $(CAMERA_KERNEL_ROOT) -name '*.h'` | uniq)
