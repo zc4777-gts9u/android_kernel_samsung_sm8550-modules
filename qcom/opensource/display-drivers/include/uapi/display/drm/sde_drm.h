@@ -543,6 +543,12 @@ struct sde_drm_roi_v1 {
 #define SDE_RECOVERY_HARD_RESET		2
 
 /**
+ * sde fod dim layer
+ */
+#define FOD_DIM_LAYER_ZORDER	0x20000001u
+#define FOD_PRESSED_LAYER_ZORDER	0x20000000u
+
+/**
  * Define UBWC statistics config
  */
 #define UBWC_STATS_MAX_ROI		0x3

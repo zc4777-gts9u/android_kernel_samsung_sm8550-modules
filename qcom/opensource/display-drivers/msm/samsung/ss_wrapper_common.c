@@ -1520,6 +1520,7 @@ int ss_wrapper_read_from_file(struct samsung_display_driver_data *vdd)
 	int ret = 0;
 	const struct firmware *f_image = NULL;
 	char firmware_path[MAX_FIRMWARE_PATH_LEN];
+	struct device *fw_dev = NULL;
 
 	if (vdd->file_loading) {
 		LCD_INFO(vdd, "Panel data loading is already done\n");
@@ -1530,7 +1531,22 @@ int ss_wrapper_read_from_file(struct samsung_display_driver_data *vdd)
 
 	LCD_INFO(vdd, "Loading Panel Data File name : [%s]\n", firmware_path);
 
-	ret = request_firmware(&f_image, firmware_path, &vdd->lcd_dev->dev);
+	if (!IS_ERR_OR_NULL(vdd->lcd_dev))
+		fw_dev = &vdd->lcd_dev->dev;
+	else if (!IS_ERR_OR_NULL(GET_DSI_PANEL(vdd)))
+		fw_dev = GET_DSI_PANEL(vdd)->parent;
+
+	if (IS_ERR_OR_NULL(fw_dev)) {
+		LCD_ERR(vdd, "no valid fw device, skip panel data firmware loading\n");
+		ret = -ENODEV;
+		goto err;
+	}
+
+	/* The Tab S9 Ultra panel has a built-in copy of its configuration. */
+	if (!strcmp(vdd->panel_name, "GTS9U_ANA38407_AMSA46AS02"))
+		ret = request_firmware_direct(&f_image, firmware_path, fw_dev);
+	else
+		ret = request_firmware(&f_image, firmware_path, fw_dev);
 	if (ret < 0) {
 		LCD_INFO(vdd, "Skip panel data firmware Loading\n");
 		goto err;

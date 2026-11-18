@@ -5762,9 +5762,11 @@ static int dsi_display_force_update_dsi_clk(struct dsi_display *display)
 		atomic_set(&display->clkrate_change_pending, 0);
 #if IS_ENABLED(CONFIG_DISPLAY_SAMSUNG)
 #if IS_ENABLED(CONFIG_DEV_RIL_BRIDGE)
-		ss_dyn_mipi_clk_tx_ffc(vdd);
-		if (vdd->dyn_mipi_clk.osc_support)
-			ss_dyn_mipi_clk_tx_osc(vdd);
+		if (vdd->dyn_mipi_clk.is_support) {
+			ss_dyn_mipi_clk_tx_ffc(vdd);
+			if (vdd->dyn_mipi_clk.osc_support)
+				ss_dyn_mipi_clk_tx_osc(vdd);
+		}
 #endif
 #endif
 	} else {
