@@ -249,6 +249,7 @@ enum msm_mdp_conn_property {
 #if IS_ENABLED(CONFIG_DISPLAY_SAMSUNG)
 	/* SAMSUNG_FINGERPRINT */
 	CONNECTOR_PROP_FINGERPRINT_MASK,
+	CONNECTOR_PROP_FRAME_BRIGHTNESS,
 #endif
 
 	/* total # of properties */

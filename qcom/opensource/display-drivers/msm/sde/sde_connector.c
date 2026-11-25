@@ -962,6 +962,10 @@ static int _sde_connector_update_dirty_properties(
 	struct sde_connector *c_conn;
 	struct sde_connector_state *c_state;
 	int idx;
+#if IS_ENABLED(CONFIG_DISPLAY_SAMSUNG)
+	u32 frame_brightness = 0;
+	int rc;
+#endif
 
 	if (!connector) {
 		SDE_ERROR("invalid argument\n");
@@ -985,6 +989,12 @@ static int _sde_connector_update_dirty_properties(
 		case CONNECTOR_PROP_HDR_METADATA:
 			_sde_connector_update_hdr_metadata(c_conn, c_state);
 			break;
+#if IS_ENABLED(CONFIG_DISPLAY_SAMSUNG)
+		case CONNECTOR_PROP_FRAME_BRIGHTNESS:
+			frame_brightness = sde_connector_get_property(connector->state,
+					CONNECTOR_PROP_FRAME_BRIGHTNESS);
+			break;
+#endif
 		default:
 			/* nothing to do for most properties */
 			break;
@@ -998,7 +1008,18 @@ static int _sde_connector_update_dirty_properties(
 		sde_connector_set_colorspace(c_conn);
 	}
 
-#if !IS_ENABLED(CONFIG_DISPLAY_SAMSUNG) /* to AVOID unexpectable brightness control */
+#if IS_ENABLED(CONFIG_DISPLAY_SAMSUNG)
+	/*
+	 * The input fences for this commit have signaled. Send the panel's DCS
+	 * brightness command before kicking off its matching frame.
+	 */
+	if (frame_brightness && c_conn->bl_device) {
+		SDE_ATRACE_INT("frame_brightness", frame_brightness);
+		rc = backlight_device_set_brightness(c_conn->bl_device, frame_brightness);
+		if (rc)
+			return rc;
+	}
+#else
 	/*
 	 * Special handling for postproc properties and
 	 * for updating backlight if any unset backlight level is present
@@ -1066,7 +1087,7 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 	}
 
 	if (!c_conn->ops.pre_kickoff)
-		return 0;
+		goto end;
 
 	params.rois = &c_state->rois;
 	params.hdr_meta = &c_state->hdr_meta;
@@ -1105,9 +1126,9 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 
 	rc = c_conn->ops.pre_kickoff(connector, c_conn->display, &params);
 
+end:
 	if (c_conn->connector_type == DRM_MODE_CONNECTOR_DSI)
 		display->queue_cmd_waits = false;
-end:
 	return rc;
 }
 
@@ -3334,6 +3355,17 @@ static int _sde_connector_install_properties(struct drm_device *dev,
 	msm_property_install_range(&c_conn->property_info, "fingerprint_mask",
 		0x0, 0, 100, 0,
 		CONNECTOR_PROP_FINGERPRINT_MASK);
+
+	if (connector_type == DRM_MODE_CONNECTOR_DSI) {
+		dsi_display = display;
+		if (dsi_display && dsi_display->panel && dsi_display->panel->name &&
+		    !strcmp(dsi_display->panel->name, "GTS9U_ANA38407_AMSA46AS02") &&
+		    (display_info->capabilities & MSM_DISPLAY_CAP_CMD_MODE))
+			msm_property_install_volatile_range(&c_conn->property_info,
+				"frame_brightness", DRM_MODE_PROP_ATOMIC, 0,
+				dsi_display->panel->bl_config.brightness_max_level, 0,
+				CONNECTOR_PROP_FRAME_BRIGHTNESS);
+	}
 #endif
 
 	msm_property_install_range(&c_conn->property_info, "sv_bl_scale",
